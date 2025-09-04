@@ -1,4 +1,4 @@
-// add-post.js - الإصدار الكامل
+// add-post.js - الإصدار المحدث مع إضافة النوع والموقع
 import { 
   auth, database, storage, serverTimestamp,
   ref, push, onValue, storageRef, uploadBytesResumable, getDownloadURL
@@ -99,13 +99,14 @@ async function handlePublishPost(e) {
     
     const title = document.getElementById('post-title').value;
     const description = document.getElementById('post-description').value;
+    const category = document.getElementById('post-category').value;
     const price = document.getElementById('post-price').value;
     const location = document.getElementById('post-location').value;
     const phone = document.getElementById('post-phone').value;
     
-    console.log('بيانات النموذج:', { title, description, price, location, phone });
+    console.log('بيانات النموذج:', { title, description, category, price, location, phone });
     
-    if (!title || !description || !location || !phone) {
+    if (!title || !description || !category || !location || !phone) {
         alert('يرجى ملء جميع الحقول المطلوبة');
         return;
     }
@@ -154,6 +155,7 @@ async function handlePublishPost(e) {
         const postData = {
             title: title,
             description: description,
+            category: category,
             price: price || '',
             location: location,
             phone: phone,
@@ -256,6 +258,7 @@ function resetAddPostForm() {
     console.log('إعادة تعيين النموذج');
     document.getElementById('post-title').value = '';
     document.getElementById('post-description').value = '';
+    document.getElementById('post-category').value = '';
     document.getElementById('post-price').value = '';
     document.getElementById('post-location').value = '';
     document.getElementById('post-phone').value = '';
@@ -277,4 +280,4 @@ function hideLoading() {
         loadingOverlay.classList.add('hidden');
         uploadProgress.style.width = '0%';
     }
-}
+          }
