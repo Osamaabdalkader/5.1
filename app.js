@@ -1,8 +1,6 @@
-// app.js - الإصدار الكامل بعد التعديل
+// app.js - الإصدار المحدث مع نظام الفلترة
 import { 
-  auth, database, storage,
-  onAuthStateChanged, signOut,
-  ref, onValue, serverTimestamp, push, set, update, remove
+  auth, database, storage, onAuthStateChanged, signOut, ref, onValue, serverTimestamp, push, set, update, remove 
 } from './firebase.js';
 
 // عناصر DOM
@@ -19,10 +17,7 @@ const moreIcon = document.getElementById('more-icon');
 let currentUserData = null;
 let adminUsers = [];
 let currentPosts = [];
-let currentFilter = {
-    type: '',
-    location: ''
-};
+let currentFilter = { type: '', location: '' };
 
 // تحميل المنشورات عند بدء التحميل
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,44 +35,11 @@ function setupEventListeners() {
             alert('صفحة الإشعارات قيد التطوير');
         });
     }
-    
-    // أيقونة الملف الشخصي في الهيدر
+
+    // أيقونة الملف الشخصي
     if (profileHeaderIcon) {
         profileHeaderIcon.addEventListener('click', () => {
-            const user = auth.currentUser;
-            if (user) {
-                window.location.href = 'profile.html';
-            } else {
-                window.location.href = 'auth.html';
-            }
-        });
-    }
-    
-    // أيقونة الدعم (تحل محل الرسائل)
-    if (supportIcon) {
-        supportIcon.addEventListener('click', () => {
-            const user = auth.currentUser;
-            if (user) {
-                window.location.href = 'support.html';
-            } else {
-                alert('يجب تسجيل الدخول أولاً للوصول إلى الدعم');
-                window.location.href = 'auth.html';
-            }
-        });
-    }
-    
-    // أيقونة المزيد (تحل محل الطلبات/الإعدادات)
-    if (moreIcon) {
-        moreIcon.addEventListener('click', () => {
-            const user = auth.currentUser;
-            if (user && currentUserData && currentUserData.isAdmin) {
-                window.location.href = 'orders.html';
-            } else if (user) {
-                window.location.href = 'more.html';
-            } else {
-                alert('يجب تسجيل الدخول أولاً');
-                window.location.href = 'auth.html';
-            }
+            window.location.href = 'profile.html';
         });
     }
 }
@@ -92,16 +54,10 @@ function checkAuthState() {
                 if (snapshot.exists()) {
                     currentUserData = snapshot.val();
                     currentUserData.uid = user.uid;
-                    
-                    // تحديث واجهة المستخدم
                     updateUIForLoggedInUser();
-                    
-                    // تحميل المشرفين
-                    loadAdminUsers();
                 }
             });
         } else {
-            // المستخدم غير مسجل
             updateUIForLoggedOutUser();
         }
     });
@@ -146,28 +102,23 @@ function loadPosts() {
         
         if (snapshot.exists()) {
             const posts = snapshot.val();
-            const postsArray = [];
-            
             for (const postId in posts) {
-                postsArray.push({ id: postId, ...posts[postId] });
+                const post = { id: postId, ...posts[postId] };
+                currentPosts.push(post);
+                
+                // تطبيق الفلتر الحالي
+                if (filterPost(post)) {
+                    createPostCard(post);
+                }
             }
             
-            // ترتيب المنشورات حسب التاريخ (الأحدث أولاً)
-            postsArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            
-            currentPosts = postsArray;
-            
-            // عرض المنشورات
-            postsArray.forEach(post => {
-                const postCard = createPostCard(post);
-                postsContainer.appendChild(postCard);
-            });
+            if (postsContainer.children.length === 0) {
+                postsContainer.innerHTML = '<p class="no-posts">لا توجد منشورات تطابق معايير البحث</p>';
+            }
         } else {
             postsContainer.innerHTML = '<p class="no-posts">لا توجد منشورات بعد</p>';
         }
         hideLoading();
-    }, {
-        onlyOnce: true
     });
 }
 
@@ -178,70 +129,32 @@ function createPostCard(post) {
     postCard.dataset.type = post.category || '';
     postCard.dataset.location = post.location || '';
     
-    // تقييد الوصف إلى سطرين
-    const shortDescription = post.description && post.description.length > 100 ? 
-        post.description.substring(0, 100) + '...' : post.description;
-    
-    // حساب المدة المنقضية منذ النشر
-    const timeAgo = formatTimeAgo(post.createdAt);
+    const imageContent = post.imageUrl ? 
+        `<img src="${post.imageUrl}" alt="${post.title}" class="post-image">` :
+        `<div class="post-image"><i class="fas fa-image"></i></div>`;
     
     postCard.innerHTML = `
-        <div class="post-image">
-            ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" loading="lazy">` : 
-            `<div class="no-image"><i class="fas fa-image"></i></div>`}
-        </div>
-        <div class="post-content">
-            <h3 class="post-title">${post.title}</h3>
-            <p class="post-description">${shortDescription || 'لا يوجد وصف'}</p>
-            
-            <div class="post-details">
-                ${post.location ? `
-                    <div class="detail-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span class="detail-location">${post.location}</span>
-                    </div>
-                ` : ''}
-                
-                ${post.category ? `
-                    <div class="detail-item">
-                        <i class="fas fa-tag"></i>
-                        <span class="detail-category">${post.category}</span>
-                    </div>
-                ` : ''}
-                
-                ${post.price ? `
-                    <div class="detail-item">
-                        <i class="fas fa-money-bill-wave"></i>
-                        <span>${post.price}</span>
-                    </div>
-                ` : ''}
-                
-                <div class="detail-item">
-                    <i class="fas fa-clock"></i>
-                    <span>${timeAgo}</span>
-                </div>
-            </div>
-            
-            <div class="post-meta">
-                <div class="post-time">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>${timeAgo}</span>
-                </div>
-                <div class="post-author">
-                    <i class="fas fa-user-circle"></i>
-                    <span>${post.authorName || 'مستخدم'}</span>
-                </div>
+        ${imageContent}
+        <h3 class="post-title">${post.title}</h3>
+        <p class="post-description">${post.description}</p>
+        <div class="post-meta">
+            <div class="post-price">${post.price || 'غير محدد'}</div>
+            <div class="post-location">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>${post.location || 'غير محدد'}</span>
             </div>
         </div>
+        <div class="post-category">${post.category || 'عام'}</div>
+        <div class="post-time">${formatTimeAgo(post.createdAt)}</div>
     `;
     
     postCard.addEventListener('click', () => {
-        // حفظ المنشور في localStorage والانتقال إلى صفحة التفاصيل
+        // حفظ المنشور المحدد للانتقال إلى صفحة التفاصيل
         localStorage.setItem('currentPost', JSON.stringify(post));
         window.location.href = 'post-detail.html';
     });
     
-    return postCard;
+    postsContainer.appendChild(postCard);
 }
 
 // تهيئة الفلاتر والبحث
@@ -250,9 +163,12 @@ function initFiltersAndSearch() {
     const searchInput = document.querySelector('.search-input');
     const searchBtn = document.querySelector('.search-btn');
     
-    if (searchBtn && searchInput) {
-        searchBtn.addEventListener('click', filterPosts);
-        searchInput.addEventListener('keyup', (e) => {
+    if (searchInput && searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            filterPosts();
+        });
+        
+        searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 filterPosts();
             }
@@ -260,106 +176,112 @@ function initFiltersAndSearch() {
     }
     
     // الفلاتر
-    const typeFilter = document.querySelector('.filter-category select');
-    const locationFilter = document.querySelector('.filter-location select');
-    
-    if (typeFilter) {
-        typeFilter.addEventListener('change', () => {
-            currentFilter.type = typeFilter.value;
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const filterType = btn.dataset.filter;
+            const filterValue = btn.dataset.value;
+            
+            if (filterType === 'type') {
+                currentFilter.type = currentFilter.type === filterValue ? '' : filterValue;
+            } else if (filterType === 'location') {
+                currentFilter.location = currentFilter.location === filterValue ? '' : filterValue;
+            } else if (filterType === 'clear') {
+                currentFilter = { type: '', location: '' };
+            }
+            
+            // تحديث حالة الأزرار
+            updateFilterButtons();
+            
+            // تطبيق الفلتر
             filterPosts();
         });
-    }
-    
-    if (locationFilter) {
-        locationFilter.addEventListener('change', () => {
-            currentFilter.location = locationFilter.value;
-            filterPosts();
-        });
-    }
+    });
+}
+
+// تحديث حالة أزرار الفلتر
+function updateFilterButtons() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        const filterType = btn.dataset.filter;
+        const filterValue = btn.dataset.value;
+        
+        if (filterType === 'type') {
+            btn.classList.toggle('active', currentFilter.type === filterValue);
+        } else if (filterType === 'location') {
+            btn.classList.toggle('active', currentFilter.location === filterValue);
+        } else if (filterType === 'clear') {
+            btn.classList.toggle('active', currentFilter.type === '' && currentFilter.location === '');
+        }
+    });
 }
 
 // فلترة المنشورات
 function filterPosts() {
     const searchInput = document.querySelector('.search-input');
     const searchText = searchInput ? searchInput.value.toLowerCase() : '';
-    const posts = document.querySelectorAll('.post-card');
     
-    let visibleCount = 0;
+    postsContainer.innerHTML = '';
     
-    posts.forEach(post => {
-        const title = post.querySelector('.post-title').textContent.toLowerCase();
-        const description = post.querySelector('.post-description').textContent.toLowerCase();
-        const type = post.dataset.type || '';
-        const location = post.dataset.location || '';
-        
-        const matchesSearch = !searchText || 
-                             title.includes(searchText) || 
-                             description.includes(searchText);
-        
-        const matchesType = !currentFilter.type || type === currentFilter.type;
-        const matchesLocation = !currentFilter.location || location === currentFilter.location;
-        
-        if (matchesSearch && matchesType && matchesLocation) {
-            post.style.display = 'block';
-            visibleCount++;
-        } else {
-            post.style.display = 'none';
-        }
-    });
-    
-    // إظهار رسالة إذا لم توجد نتائج
-    const noResults = document.getElementById('no-results');
-    if (visibleCount === 0 && posts.length > 0) {
-        if (!noResults) {
-            const noResultsMsg = document.createElement('p');
-            noResultsMsg.id = 'no-results';
-            noResultsMsg.className = 'no-posts';
-            noResultsMsg.textContent = 'لا توجد نتائج تطابق بحثك';
-            postsContainer.appendChild(noResultsMsg);
-        }
-    } else if (noResults) {
-        noResults.remove();
+    if (currentPosts.length === 0) {
+        postsContainer.innerHTML = '<p class="no-posts">لا توجد منشورات بعد</p>';
+        return;
     }
+    
+    let filteredPosts = currentPosts.filter(post => filterPost(post, searchText));
+    
+    if (filteredPosts.length === 0) {
+        postsContainer.innerHTML = '<p class="no-posts">لا توجد منشورات تطابق معايير البحث</p>';
+    } else {
+        filteredPosts.forEach(post => createPostCard(post));
+    }
+}
+
+// دالة مساعدة للفلترة
+function filterPost(post, searchText = '') {
+    // فلترة حسب النوع
+    if (currentFilter.type && post.category !== currentFilter.type) {
+        return false;
+    }
+    
+    // فلترة حسب الموقع
+    if (currentFilter.location && post.location !== currentFilter.location) {
+        return false;
+    }
+    
+    // فلترة حسب البحث
+    if (searchText) {
+        const searchableText = `${post.title} ${post.description} ${post.category} ${post.location}`.toLowerCase();
+        if (!searchableText.includes(searchText.toLowerCase())) {
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 // دالة لتنسيق الوقت المنقضي
 function formatTimeAgo(timestamp) {
     if (!timestamp) return 'غير معروف';
     
-    const now = new Date();
-    let postDate;
-    
-    // معالجة تنسيقات التاريخ المختلفة
-    if (typeof timestamp === 'object' && timestamp.seconds) {
-        // إذا كان timestamp من Firebase
-        postDate = new Date(timestamp.seconds * 1000);
-    } else if (typeof timestamp === 'number') {
-        // إذا كان timestamp رقمي
-        postDate = new Date(timestamp);
-    } else {
+    try {
+        const date = typeof timestamp === 'object' ? 
+            new Date(timestamp.seconds * 1000) : 
+            new Date(timestamp);
+            
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return 'الآن';
+        if (diffInSeconds < 3600) return `قبل ${Math.floor(diffInSeconds / 60)} دقيقة`;
+        if (diffInSeconds < 86400) return `قبل ${Math.floor(diffInSeconds / 3600)} ساعة`;
+        if (diffInSeconds < 2592000) return `قبل ${Math.floor(diffInSeconds / 86400)} يوم`;
+        
+        return date.toLocaleDateString('ar-EG');
+    } catch (error) {
+        console.error('Error formatting date:', error);
         return 'غير معروف';
     }
-    
-    const diff = now - postDate;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    const weeks = Math.floor(days / 7);
-    const months = Math.floor(days / 30);
-    
-    if (minutes < 1) return 'الآن';
-    if (minutes < 60) return `منذ ${minutes} دقيقة`;
-    if (hours < 24) return `منذ ${hours} ساعة`;
-    if (days < 7) return `منذ ${days} يوم`;
-    if (weeks < 4) return `منذ ${weeks} أسبوع`;
-    if (months < 12) return `منذ ${months} شهر`;
-    
-    return postDate.toLocaleDateString('ar-EG', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
 }
 
 // وظائف مساعدة
@@ -369,4 +291,4 @@ function showLoading() {
 
 function hideLoading() {
     if (loadingOverlay) loadingOverlay.classList.add('hidden');
-}
+        }
