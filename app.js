@@ -1,4 +1,4 @@
-// استيراد دوال Firebase
+// app.js - الإصدار الكامل بعد التعديل
 import { 
   auth, database, storage,
   onAuthStateChanged, signOut,
@@ -8,18 +8,79 @@ import {
 // عناصر DOM
 const postsContainer = document.getElementById('posts-container');
 const adminIcon = document.getElementById('admin-icon');
-const authButtons = document.getElementById('auth-buttons');
 const loadingOverlay = document.getElementById('loading-overlay');
+const uploadProgress = document.getElementById('upload-progress');
+const notificationsIcon = document.getElementById('notifications-icon');
+const profileHeaderIcon = document.getElementById('profile-header-icon');
+const supportIcon = document.getElementById('support-icon');
+const moreIcon = document.getElementById('more-icon');
 
 // متغيرات النظام
 let currentUserData = null;
 let adminUsers = [];
+let currentPosts = [];
+let currentFilter = {
+    type: '',
+    location: ''
+};
 
 // تحميل المنشورات عند بدء التحميل
 document.addEventListener('DOMContentLoaded', () => {
     loadPosts();
     checkAuthState();
+    initFiltersAndSearch();
+    setupEventListeners();
 });
+
+// إعداد مستمعي الأحداث
+function setupEventListeners() {
+    // أيقونة الإشعارات
+    if (notificationsIcon) {
+        notificationsIcon.addEventListener('click', () => {
+            alert('صفحة الإشعارات قيد التطوير');
+        });
+    }
+    
+    // أيقونة الملف الشخصي في الهيدر
+    if (profileHeaderIcon) {
+        profileHeaderIcon.addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (user) {
+                window.location.href = 'profile.html';
+            } else {
+                window.location.href = 'auth.html';
+            }
+        });
+    }
+    
+    // أيقونة الدعم (تحل محل الرسائل)
+    if (supportIcon) {
+        supportIcon.addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (user) {
+                window.location.href = 'support.html';
+            } else {
+                alert('يجب تسجيل الدخول أولاً للوصول إلى الدعم');
+                window.location.href = 'auth.html';
+            }
+        });
+    }
+    
+    // أيقونة المزيد (تحل محل الطلبات/الإعدادات)
+    if (moreIcon) {
+        moreIcon.addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (user && currentUserData && currentUserData.isAdmin) {
+                window.location.href = 'orders.html';
+            } else if (user) {
+                window.location.href = 'more.html';
+            } else {
+                alert('يجب تسجيل الدخول أولاً');
+                window.location.href = 'auth.html';
+            }
+        });
+    }
+}
 
 // التحقق من حالة المصادقة
 function checkAuthState() {
@@ -48,12 +109,6 @@ function checkAuthState() {
 
 // تحديث الواجهة للمستخدم المسجل
 function updateUIForLoggedInUser() {
-    authButtons.innerHTML = `
-        <button id="logout-btn" class="btn btn-outline">تسجيل الخروج</button>
-    `;
-    
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
-    
     // إظهار أيقونة الإدارة إذا كان المستخدم مشرفاً
     if (currentUserData && currentUserData.isAdmin) {
         adminIcon.style.display = 'flex';
@@ -62,22 +117,7 @@ function updateUIForLoggedInUser() {
 
 // تحديث الواجهة للمستخدم غير المسجل
 function updateUIForLoggedOutUser() {
-    authButtons.innerHTML = `
-        <a href="auth.html" class="btn btn-outline">تسجيل الدخول</a>
-    `;
     adminIcon.style.display = 'none';
-}
-
-// معالجة تسجيل الخروج
-function handleLogout() {
-    signOut(auth).then(() => {
-        currentUserData = null;
-        updateUIForLoggedOutUser();
-        // إعادة تحميل الصفحة لتحديث البيانات
-        window.location.reload();
-    }).catch((error) => {
-        console.error('Error signing out:', error);
-    });
 }
 
 // تحميل المشرفين
@@ -102,6 +142,8 @@ function loadPosts() {
     const postsRef = ref(database, 'posts');
     onValue(postsRef, (snapshot) => {
         postsContainer.innerHTML = '';
+        currentPosts = [];
+        
         if (snapshot.exists()) {
             const posts = snapshot.val();
             const postsArray = [];
@@ -112,6 +154,8 @@ function loadPosts() {
             
             // ترتيب المنشورات حسب التاريخ (الأحدث أولاً)
             postsArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            
+            currentPosts = postsArray;
             
             // عرض المنشورات
             postsArray.forEach(post => {
@@ -131,18 +175,60 @@ function loadPosts() {
 function createPostCard(post) {
     const postCard = document.createElement('div');
     postCard.className = 'post-card';
+    postCard.dataset.type = post.category || '';
+    postCard.dataset.location = post.location || '';
+    
+    // تقييد الوصف إلى سطرين
+    const shortDescription = post.description && post.description.length > 100 ? 
+        post.description.substring(0, 100) + '...' : post.description;
+    
+    // حساب المدة المنقضية منذ النشر
+    const timeAgo = formatTimeAgo(post.createdAt);
+    
     postCard.innerHTML = `
         <div class="post-image">
             ${post.imageUrl ? `<img src="${post.imageUrl}" alt="${post.title}" loading="lazy">` : 
-            `<i class="fas fa-image"></i>`}
+            `<div class="no-image"><i class="fas fa-image"></i></div>`}
         </div>
         <div class="post-content">
             <h3 class="post-title">${post.title}</h3>
-            <p class="post-description">${post.description}</p>
+            <p class="post-description">${shortDescription || 'لا يوجد وصف'}</p>
+            
+            <div class="post-details">
+                ${post.location ? `
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span class="detail-location">${post.location}</span>
+                    </div>
+                ` : ''}
+                
+                ${post.category ? `
+                    <div class="detail-item">
+                        <i class="fas fa-tag"></i>
+                        <span class="detail-category">${post.category}</span>
+                    </div>
+                ` : ''}
+                
+                ${post.price ? `
+                    <div class="detail-item">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>${post.price}</span>
+                    </div>
+                ` : ''}
+                
+                <div class="detail-item">
+                    <i class="fas fa-clock"></i>
+                    <span>${timeAgo}</span>
+                </div>
+            </div>
+            
             <div class="post-meta">
-                <div class="post-price">${post.price || 'غير محدد'}</div>
+                <div class="post-time">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>${timeAgo}</span>
+                </div>
                 <div class="post-author">
-                    <i class="fas fa-user"></i>
+                    <i class="fas fa-user-circle"></i>
                     <span>${post.authorName || 'مستخدم'}</span>
                 </div>
             </div>
@@ -156,6 +242,124 @@ function createPostCard(post) {
     });
     
     return postCard;
+}
+
+// تهيئة الفلاتر والبحث
+function initFiltersAndSearch() {
+    // البحث
+    const searchInput = document.querySelector('.search-input');
+    const searchBtn = document.querySelector('.search-btn');
+    
+    if (searchBtn && searchInput) {
+        searchBtn.addEventListener('click', filterPosts);
+        searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                filterPosts();
+            }
+        });
+    }
+    
+    // الفلاتر
+    const typeFilter = document.querySelector('.filter-category select');
+    const locationFilter = document.querySelector('.filter-location select');
+    
+    if (typeFilter) {
+        typeFilter.addEventListener('change', () => {
+            currentFilter.type = typeFilter.value;
+            filterPosts();
+        });
+    }
+    
+    if (locationFilter) {
+        locationFilter.addEventListener('change', () => {
+            currentFilter.location = locationFilter.value;
+            filterPosts();
+        });
+    }
+}
+
+// فلترة المنشورات
+function filterPosts() {
+    const searchInput = document.querySelector('.search-input');
+    const searchText = searchInput ? searchInput.value.toLowerCase() : '';
+    const posts = document.querySelectorAll('.post-card');
+    
+    let visibleCount = 0;
+    
+    posts.forEach(post => {
+        const title = post.querySelector('.post-title').textContent.toLowerCase();
+        const description = post.querySelector('.post-description').textContent.toLowerCase();
+        const type = post.dataset.type || '';
+        const location = post.dataset.location || '';
+        
+        const matchesSearch = !searchText || 
+                             title.includes(searchText) || 
+                             description.includes(searchText);
+        
+        const matchesType = !currentFilter.type || type === currentFilter.type;
+        const matchesLocation = !currentFilter.location || location === currentFilter.location;
+        
+        if (matchesSearch && matchesType && matchesLocation) {
+            post.style.display = 'block';
+            visibleCount++;
+        } else {
+            post.style.display = 'none';
+        }
+    });
+    
+    // إظهار رسالة إذا لم توجد نتائج
+    const noResults = document.getElementById('no-results');
+    if (visibleCount === 0 && posts.length > 0) {
+        if (!noResults) {
+            const noResultsMsg = document.createElement('p');
+            noResultsMsg.id = 'no-results';
+            noResultsMsg.className = 'no-posts';
+            noResultsMsg.textContent = 'لا توجد نتائج تطابق بحثك';
+            postsContainer.appendChild(noResultsMsg);
+        }
+    } else if (noResults) {
+        noResults.remove();
+    }
+}
+
+// دالة لتنسيق الوقت المنقضي
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'غير معروف';
+    
+    const now = new Date();
+    let postDate;
+    
+    // معالجة تنسيقات التاريخ المختلفة
+    if (typeof timestamp === 'object' && timestamp.seconds) {
+        // إذا كان timestamp من Firebase
+        postDate = new Date(timestamp.seconds * 1000);
+    } else if (typeof timestamp === 'number') {
+        // إذا كان timestamp رقمي
+        postDate = new Date(timestamp);
+    } else {
+        return 'غير معروف';
+    }
+    
+    const diff = now - postDate;
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    const weeks = Math.floor(days / 7);
+    const months = Math.floor(days / 30);
+    
+    if (minutes < 1) return 'الآن';
+    if (minutes < 60) return `منذ ${minutes} دقيقة`;
+    if (hours < 24) return `منذ ${hours} ساعة`;
+    if (days < 7) return `منذ ${days} يوم`;
+    if (weeks < 4) return `منذ ${weeks} أسبوع`;
+    if (months < 12) return `منذ ${months} شهر`;
+    
+    return postDate.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
 }
 
 // وظائف مساعدة
