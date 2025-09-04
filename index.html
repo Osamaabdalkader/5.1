@@ -26,74 +26,87 @@
                 </div>
             </div>
         </div>
-
-        <div class="header-bottom">
-            <div class="search-container">
-                <input type="text" placeholder="ابحث عن منتج أو خدمة..." class="search-input">
-                <button class="search-btn"><i class="fas fa-search"></i></button>
-            </div>
-
-            <div class="filters-scroll">
-                <div class="filters-row">
-                    <div class="filter-category">
-                        <select class="filter-select">
-                            <option value="">جميع الفئات</option>
-                            <option value="ادوية">ادوية</option>
-                            <option value="عقارات">عقارات</option>
-                            <option value="الكترونيات">الكترونيات</option>
-                            <option value="ملابس">ملابس</option>
-                            <option value="وظائف">وظائف</option>
-                            <option value="اخرى">أخرى</option>
-                        </select>
-                    </div>
-                    <div class="filter-location">
-                        <select class="filter-select">
-                            <option value="">جميع المدن</option>
-                            <option value="تعز">تعز</option>
-                            <option value="عدن">عدن</option>
-                            <option value="مارب">مارب</option>
-                            <option value="صنعاء">صنعاء</option>
-                            <option value="الحديدة">الحديدة</option>
-                            <option value="شبوة">شبوة</option>
-                            <option value="اب">اب</option>
-                            <option value="ذمار">ذمار</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
     </header>
 
-    <!-- الصفحة الرئيسية -->
+    <!-- محتوى الصفحة -->
     <div class="container">
-        <div class="posts-grid" id="posts-container">
-            <!-- سيتم تحميل المنشورات هنا -->
-            <div class="loading-text">جاري تحميل المنشورات...</div>
+        <!-- شريط البحث والفلاتر -->
+        <div class="search-filters">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="ابحث في المنشورات...">
+                <button class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            
+            <div class="filters-container">
+                <h3>الفلاتر:</h3>
+                
+                <div class="filter-group">
+                    <h4>نوع المنتج:</h4>
+                    <div class="filter-buttons">
+                        <button class="filter-btn" data-filter="type" data-value="سيارات">سيارات</button>
+                        <button class="filter-btn" data-filter="type" data-value="عقارات">عقارات</button>
+                        <button class="filter-btn" data-filter="type" data-value="أجهزة">أجهزة</button>
+                        <button class="filter-btn" data-filter="type" data-value="أثاث">أثاث</button>
+                        <button class="filter-btn" data-filter="type" data-value="ملابس">ملابس</button>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <h4>المكان:</h4>
+                    <div class="filter-buttons">
+                        <button class="filter-btn" data-filter="location" data-value="الرياض">الرياض</button>
+                        <button class="filter-btn" data-filter="location" data-value="جدة">جدة</button>
+                        <button class="filter-btn" data-filter="location" data-value="مكة">مكة</button>
+                        <button class="filter-btn" data-filter="location" data-value="الدمام">الدمام</button>
+                        <button class="filter-btn" data-filter="location" data-value="أبها">أبها</button>
+                    </div>
+                </div>
+                
+                <button class="filter-btn" data-filter="clear">مسح الفلاتر</button>
+            </div>
+        </div>
+
+        <!-- حاوية المنشورات -->
+        <div class="posts-container">
+            <div class="posts-header">
+                <h2>أحدث المنشورات</h2>
+                <span id="posts-count">0 منشور</span>
+            </div>
+            
+            <div class="posts-grid" id="posts-container">
+                <div class="loading-text">جاري تحميل المنشورات...</div>
+            </div>
         </div>
     </div>
 
-    <!-- شريط التذييل المعدل -->
+    <!-- شريط التذييل -->
     <footer>
         <div class="footer-icons">
-            <a href="groups.html" class="icon">
-                <i class="fas fa-users"></i>
-                <span>مجموعتك</span>
+            <a href="profile.html" class="icon">
+                <i class="fas fa-user"></i>
+                <span>حسابي</span>
             </a>
-            <a href="cart.html" class="icon">
-                <i class="fas fa-shopping-cart"></i>
-                <span>السلة</span>
+            <a href="messages.html" class="icon">
+                <i class="fas fa-envelope"></i>
+                <span>الرسائل</span>
             </a>
             <a href="add-post.html" class="icon highlight">
                 <i class="fas fa-plus"></i>
-                <span>إضافة</span>
             </a>
-            <a href="support.html" class="icon" id="support-icon">
+            <a href="#" class="icon" id="support-icon">
                 <i class="fas fa-headset"></i>
                 <span>الدعم</span>
             </a>
-            <a href="more.html" class="icon" id="more-icon">
-                <i class="fas fa-cog"></i>
+            <a href="#" class="icon" id="more-icon">
+                <i class="fas fa-ellipsis-h"></i>
                 <span>المزيد</span>
+            </a>
+            <!-- أيقونة الإدارة (تظهر للمشرفين فقط) -->
+            <a href="orders.html" class="icon" id="admin-icon" style="display: none;">
+                <i class="fas fa-cog"></i>
+                <span>الإدارة</span>
             </a>
         </div>
     </footer>
@@ -108,6 +121,7 @@
     </div>
 
     <!-- Firebase SDK -->
+    <script type="module" src="firebase.js"></script>
     <script type="module" src="app.js"></script>
 </body>
-    </html>
+                            </html>
