@@ -7,8 +7,8 @@ import {
   createUserWithEmailAndPassword, 
   onAuthStateChanged, 
   signOut,
-  setPersistence,
-  browserSessionPersistence
+  setPersistence, 
+  browserSessionPersistence 
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 import { 
   getDatabase, 
@@ -55,13 +55,13 @@ try {
   auth = getAuth(app);
   database = getDatabase(app);
   storage = getStorage(app);
-  
+
   // جعل حالة تسجيل الدخول تستمر خلال الجلسة
   setPersistence(auth, browserSessionPersistence)
     .catch((error) => {
       console.error("Error setting persistence:", error);
     });
-  
+
   console.log("Firebase initialized successfully");
 } catch (error) {
   console.error("Firebase initialization error:", error);
@@ -69,8 +69,9 @@ try {
 
 // تصدير الكائنات لاستخدامها في ملفات أخرى
 export { 
-  app, analytics, auth, database, storage,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut,
-  ref, set, push, onValue, serverTimestamp, update, remove, query, orderByChild, equalTo,
-  storageRef, uploadBytesResumable, getDownloadURL
+  app, analytics, auth, database, storage, 
+  signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+  onAuthStateChanged, signOut, ref, set, push, onValue, 
+  serverTimestamp, update, remove, query, orderByChild, 
+  equalTo, storageRef, uploadBytesResumable, getDownloadURL 
 };
